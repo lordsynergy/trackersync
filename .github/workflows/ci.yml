@@ -9,8 +9,18 @@ on:
       - main
 
 jobs:
-  tests:
+  build_and_test:
     runs-on: ubuntu-latest
+
+    services:
+      redmine_test:
+        build:
+          context: .
+          dockerfile: Dockerfile
+        image: custom_redmine:latest
+        ports:
+          - '3000:3000'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,27 +33,6 @@ jobs:
       - name: Install dependencies
         run: |
           bundle install --jobs 4 --retry 3
-
-      - name: Set up Docker
-        run: |
-          docker build -t custom_redmine:latest .
-
-      - name: Run Redmine container
-        run: |
-          docker run -d --name redmine_test -p 3000:3000 custom_redmine:latest
-
-      - name: Wait for entrypoint to complete
-        run: |
-          echo "Waiting for entrypoint to finish..."
-          for i in {1..30}; do
-            if docker exec redmine_test test -f /tmp/redmine_ready; then
-              echo "Entrypoint completed successfully!"
-              break
-            else
-              echo "Waiting for entrypoint to complete..."
-              sleep 10
-            fi
-          done
 
       - name: Fetch API Key and URL
         run: |

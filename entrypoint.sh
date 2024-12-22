@@ -12,90 +12,46 @@ until curl -s http://localhost:3000 > /dev/null; do
 done
 echo "Redmine is ready!"
 
-bundle exec rails runner - <<-RUBY
+bundle exec rails runner - <<'RUBY'
   begin
     Setting['rest_api_enabled'] = '1'
 
-    admin = User.find_by(login: 'admin')
-    admin.password = 'password'
-    admin.password_confirmation = 'password'
-    admin.status = User::STATUS_ACTIVE
-    if admin.save
-      puts 'Admin updated successfully.'
-    else
-      puts 'Failed to update admin:'
-      puts admin.errors.full_messages
-    end
-
-    if admin.api_key.nil?
-      admin.generate_api_key
-      admin.save!
-    end
-
-    puts "Admin API Key: #{admin.api_key}"
-
-    project = Project.find_or_create_by(identifier: 'test-project') do |p|
+    project = Project.find_or_create_by!(identifier: 'test-project') do |p|
       p.name = 'Test Project'
     end
+    puts 'Project created successfully.'
 
-    if project.persisted?
-      puts 'Project created successfully.'
-    else
-      puts 'Failed to create project'
-      puts project.errors.full_messages
-    end
-
-    user = User.find_by(login: 'testuser')
-
-    if user
-      puts 'Test user already exists.'
-    else
-      user = User.new(
-        login: 'testuser',
+    user = User.find_or_initialize_by(login: 'testuser')
+    unless user.persisted?
+      user.assign_attributes(
         firstname: 'Test',
         lastname: 'User',
         mail: 'user@example.com',
         password: 'password',
-        password_confirmation: 'password'
+        password_confirmation: 'password',
+        admin: false,
+        status: User::STATUS_ACTIVE
       )
-      user.admin = false
-      user.status = User::STATUS_ACTIVE
-
-      if user.save
-        puts 'Test user created successfully.'
-      else
-        puts 'Failed to create test user'
-        puts user.errors.full_messages
-        exit 1
-      end
-    end
-
-    if user.api_key.nil?
-      user.generate_api_key
       user.save!
+      puts 'Test user created successfully.'
+    else
+      puts 'Test user already exists.'
     end
 
+    user.generate_api_key! unless user.api_key
     puts "Test User API Key: #{user.api_key}"
 
-    role = Role.find_by(name: 'Manager')
-
-    if role
-      member = Member.new(user: user, project: project)
-      member.role_ids = [role.id]
-      if member.save
-        puts 'User added to project successfully'
-      else
-        puts 'Failed to add user to project'
-        puts member.errors.full_messages
-      end
+    if (role = Role.find_by(name: 'Manager'))
+      Member.create!(user: user, project: project, role_ids: [role.id])
+      puts 'User added to project successfully'
     else
       puts 'No suitable role found. User not added to project.'
     end
 
     puts 'Setup completed successfully!'
   rescue => e
-    puts "An error occurred: #{e.message}"
-    puts e.backtrace
+    warn "An error occurred: #{e.message}"
+    warn e.backtrace
     exit 1
   end
 RUBY
