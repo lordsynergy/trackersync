@@ -6,6 +6,5 @@ gem 'activeresource'
 gem 'dotenv'
 
 group :test do
-  gem 'rest-client'
   gem 'rspec'
 end
