@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
 require 'dotenv/load'
-require 'rest-client'
 require 'json'
-require_relative './support/redmine_helpers'
 
-RSpec.configure do |config|
-  config.include RedmineHelpers
-end
+Dir[File.join(__dir__, '../lib/**/*.rb')].sort.each { |file| require file }

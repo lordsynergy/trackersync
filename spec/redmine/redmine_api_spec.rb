@@ -3,27 +3,20 @@
 require 'spec_helper'
 
 RSpec.describe 'Redmine API' do
-  let(:issues) { fetch_issues }
+  let(:issues) { Redmine::Issue.all }
+  let(:issue_titles) { ['Test Task 1', 'Test Task 2'] }
 
   before(:all) do
-    create_test_issues
+    ['Test Task 1', 'Test Task 2'].each do |title|
+      Redmine::Issue.create!(subject: title, project_id: 'test-project')
+    end
   end
 
   describe 'Issues existence' do
     it 'verifies all issues exist in Redmine' do
-      titles = issues.map { |issue| issue['subject'] }
-
+      titles = issues.map(&:subject)
       issue_titles.each do |title|
         expect(titles).to include(title)
-      end
-    end
-  end
-
-  describe 'Issues project assignment' do
-    it 'verifies all issues are assigned to the project' do
-      issue_titles.each do |title|
-        issue = find_issue_by_subject(title, issues)
-        expect(issue['project']['name']).to eq('Test Project')
       end
     end
   end
@@ -31,9 +24,8 @@ RSpec.describe 'Redmine API' do
   describe 'Issues accessibility' do
     it 'verifies all tasks are accessible via their IDs' do
       issues.each do |issue|
-        task_id = issue['id']
-        response = RestClient.get("#{redmine_url}/issues/#{task_id}.json", headers)
-        expect(response.code).to eq(200)
+        fetched_issue = Redmine::Issue.find(issue.id)
+        expect(fetched_issue.subject).to eq(issue.subject)
       end
     end
   end

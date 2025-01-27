@@ -2,6 +2,7 @@
 
 source 'https://rubygems.org'
 
+gem 'activeresource'
 gem 'dotenv'
 
 group :test do
